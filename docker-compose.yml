@@ -6,24 +6,36 @@ services:
     container_name: metrics-monitor
     ports:
       - "8888:8888"
-    env_file:
-      - .env
+    environment:
+      - DB_HOST=metrics-db
+      - DB_USER=postgres
+      - DB_PASS=postgres
+      - DB_NAME=metrics_db
+      - DB_PORT=5432
     depends_on:
-      - db
-    restart: always
+      metrics-db:
+        condition: service_healthy
+    entrypoint: >
+      sh -c "until pg_isready -h metrics-db -p 5432 -U postgres; do sleep 2; done && ./metrics-monitor"
 
-  db:
+  metrics-db:
     image: postgres:15-alpine
     container_name: metrics-db
-    restart: always
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
       POSTGRES_DB: metrics_db
     ports:
-      - "5432:5432"
+      - "5431:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "metrics_db"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
 
 volumes:
   pgdata:

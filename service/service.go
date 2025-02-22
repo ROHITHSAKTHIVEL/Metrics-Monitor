@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"time"
 
 	"github.com/ROHITHSAKTHIVEL/Metrics-Monitor/database"
@@ -10,6 +11,7 @@ import (
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/mem"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 func MetricsCollector(interval int, stopChan chan struct{}, errChan chan error) {
@@ -65,4 +67,56 @@ func CollectAndSaveMetrics(errChan chan error) {
 		logger.Log.Error("Failed to insert metrics into database", zap.Error(err))
 		errChan <- err
 	}
+}
+
+func GetAllMetrics(ctx context.Context) ([]models.Metrics, error) {
+	var res []models.Metrics
+
+	if database.DB == nil {
+		logger.Log.Error("Database is not initialized")
+		return nil, gorm.ErrInvalidDB
+	}
+
+	if err := database.DB.WithContext(ctx).Find(&res).Error; err != nil {
+		logger.Log.Error("Error fetching metrics:", zap.Error(err))
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func GetMetricsByTimeRange(ctx context.Context, start, end time.Time) ([]models.Metrics, error) {
+
+	var res []models.Metrics
+
+	err := database.DB.WithContext(ctx).
+		Where("created_at BETWEEN ? AND ?", start, end).
+		Find(&res).Error
+	if err != nil {
+		logger.Log.Error("Error fetching metrics by time range:", zap.Error(err))
+	}
+
+	return res, nil
+}
+
+func GetAverageMetrics(ctx context.Context, start, end time.Time) (models.Metrics, error) {
+	var res models.Metrics
+
+	if database.DB == nil {
+		logger.Log.Error("Database is not initialized")
+		return models.Metrics{}, gorm.ErrInvalidDB
+	}
+
+	if err := database.DB.WithContext(ctx).
+		Raw(`SELECT 
+                AVG(cpu_percent) AS cpu_percent, 
+                AVG(memory_percent) AS memory_percent 
+             FROM metrics 
+             WHERE created_at BETWEEN ? AND ?`, start, end).
+		Scan(&res).Error; err != nil {
+		logger.Log.Error("Error fetching average metrics:", zap.Error(err))
+		return models.Metrics{}, err
+	}
+
+	return res, nil
 }
