@@ -6,9 +6,9 @@ import (
 	"log"
 
 	"github.com/ROHITHSAKTHIVEL/Metrics-Monitor/models"
+	_ "github.com/lib/pq"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	_ "github.com/lib/pq"
 )
 
 var DB *gorm.DB
@@ -22,7 +22,7 @@ func InitDB(cfg *models.Config) {
 
 	db, err := gorm.Open(postgres.Open(dbURL), &gorm.Config{})
 	if err != nil {
-		log.Fatal("error in connecting DB")
+		log.Fatal("error in connecting DB", err)
 		return
 	}
 	DB = db

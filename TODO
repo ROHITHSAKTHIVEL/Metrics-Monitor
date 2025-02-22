@@ -1,0 +1,70 @@
+// package repo
+
+// import (
+// 	"context"
+// 	"time"
+
+// 	"github.com/ROHITHSAKTHIVEL/Metrics-Monitor/database"
+// 	"github.com/ROHITHSAKTHIVEL/Metrics-Monitor/logger"
+// 	"github.com/ROHITHSAKTHIVEL/Metrics-Monitor/models"
+// 	"go.uber.org/zap"
+// 	"gorm.io/gorm"
+// )
+
+// type InterfaceMetrics interface {
+// 	GetAllMetrics(ctx context.Context, pageSize, offset int) ([]models.Metrics, error)
+// 	GetMetricsByTimeRange(ctx context.Context, start, end time.Time) ([]models.Metrics, error)
+// 	GetAverageMetrics(ctx context.Context, start, end time.Time) (models.Metrics, error)
+// }
+
+// type RepoImpl struct {
+// 	DB *gorm.DB
+// }
+
+// func (d *RepoImpl) GetAllMetrics(ctx context.Context, pageSize, offset int) ([]models.Metrics, error) {
+// 	var res []models.Metrics
+// 	if err := database.DB.WithContext(ctx).
+// 		Limit(pageSize).
+// 		Offset(offset).
+// 		Order("created_at DESC").
+// 		Find(&res).Error; err != nil {
+// 		logger.Log.Error("Error fetching metrics:", zap.Error(err))
+// 		return nil, err
+// 	}
+// 	return res, nil
+// }
+
+// func (d *RepoImpl) Count() {
+
+// }
+// func (d *RepoImpl) GetMetricsByTimeRange() {
+
+// }
+// func (d *RepoImpl) GetAverageMetrics() {
+
+// }
+
+
+
+// type App struct {
+// 	DB      *gorm.DB
+// 	Router  gin.Engine
+// 	Service *service.Service
+// }
+
+// func Initialize() *handler.MetricsHandler {
+	
+// 	ser := service.NewService(rep)
+// 	h := handler.NewMetricsHandler(ser)
+// }
+
+
+
+
+// type Service struct {
+// 	DB repo.InterfaceMetrics
+// }
+
+// func NewService(DB *gorm.DB) *Service {
+// 	return &Service{DB: repo}
+// }

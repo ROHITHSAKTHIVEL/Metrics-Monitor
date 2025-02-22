@@ -35,7 +35,6 @@ func main() {
 		}
 	}()
 
-
 	go func() {
 		if err := r.Run(cfg.Port); err != nil {
 			logger.Log.Fatal("Server failed to start", zap.Error(err))

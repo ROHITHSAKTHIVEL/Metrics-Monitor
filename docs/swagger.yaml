@@ -1,0 +1,132 @@
+definitions:
+  models.Metrics:
+    properties:
+      cpu_percent:
+        type: number
+      created_at:
+        type: string
+      id:
+        type: string
+      memory_percent:
+        type: number
+      updated_sat:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /metrics:
+    get:
+      consumes:
+      - application/json
+      description: Fetches all metrics collected between the provided start and end
+        timestamps.
+      parameters:
+      - description: Start timestamp (RFC3339 format, e.g., 2025-02-22T00:00:00Z)
+        in: query
+        name: start
+        required: true
+        type: string
+      - description: End timestamp (RFC3339 format, e.g., 2025-02-22T23:59:59Z)
+        in: query
+        name: end
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of metrics
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid input format
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: No metrics found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get Metrics By Time Range
+      tags:
+      - Metrics
+  /metrics/:
+    get:
+      consumes:
+      - application/json
+      description: Get paginated metrics data
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Retrieve all collected metrics
+      tags:
+      - Metrics
+  /metrics/average:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve average CPU and memory usage between start and end timestamps
+      parameters:
+      - description: Start timestamp (RFC3339 format)
+        in: query
+        name: start
+        required: true
+        type: string
+      - description: End timestamp (RFC3339 format)
+        in: query
+        name: end
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Metrics'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get average CPU and memory usage in a time range
+      tags:
+      - Metrics
+swagger: "2.0"

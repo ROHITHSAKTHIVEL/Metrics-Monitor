@@ -7,6 +7,7 @@ import (
 	"github.com/ROHITHSAKTHIVEL/Metrics-Monitor/database"
 	"github.com/ROHITHSAKTHIVEL/Metrics-Monitor/logger"
 	"github.com/ROHITHSAKTHIVEL/Metrics-Monitor/models"
+	"github.com/ROHITHSAKTHIVEL/Metrics-Monitor/utils"
 	"github.com/google/uuid"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/mem"
@@ -40,49 +41,56 @@ func CollectAndSaveMetrics(errChan chan error) {
 	var metrics models.Metrics
 	metrics.ID = uuid.New()
 
-	// Get CPU Usage
 	cpuPercent, err := cpu.Percent(0, false)
 	if err != nil {
 		logger.Log.Error("Failed to get CPU usage", zap.Error(err))
 		errChan <- err
 		return
 	}
-	metrics.CPUPercent = cpuPercent[0]
+	metrics.CPUPercent = utils.RoundToTwoDecimal(cpuPercent[0])
 
 	logger.Log.Info("CPU Percent", zap.Float64("value", cpuPercent[0]))
 
-	// Get Memory Usage
 	memStats, err := mem.VirtualMemory()
 	if err != nil {
 		logger.Log.Error("Failed to get Memory usage", zap.Error(err))
 		errChan <- err
 		return
 	}
-	metrics.MemPercent = memStats.UsedPercent
+	metrics.MemPercent = utils.RoundToTwoDecimal(memStats.UsedPercent)
 
 	logger.Log.Info("Memory Percent", zap.Float64("value", memStats.UsedPercent))
 
-	// Store in database
 	if err := database.DB.Create(&metrics).Error; err != nil {
 		logger.Log.Error("Failed to insert metrics into database", zap.Error(err))
 		errChan <- err
 	}
 }
 
-func GetAllMetrics(ctx context.Context) ([]models.Metrics, error) {
+func GetAllMetrics(ctx context.Context, pageSize, offset int) ([]models.Metrics, int64, error) {
 	var res []models.Metrics
+	var totalRecords int64
 
 	if database.DB == nil {
 		logger.Log.Error("Database is not initialized")
-		return nil, gorm.ErrInvalidDB
+		return nil, 0, gorm.ErrInvalidDB
 	}
 
-	if err := database.DB.WithContext(ctx).Find(&res).Error; err != nil {
+	if err := database.DB.Model(&models.Metrics{}).Count(&totalRecords).Error; err != nil {
+		logger.Log.Error("Error counting metrics:", zap.Error(err))
+		return nil, 0, err
+	}
+
+	if err := database.DB.WithContext(ctx).
+		Limit(pageSize).
+		Offset(offset).
+		Order("created_at DESC").
+		Find(&res).Error; err != nil {
 		logger.Log.Error("Error fetching metrics:", zap.Error(err))
-		return nil, err
+		return nil, 0, err
 	}
 
-	return res, nil
+	return res, totalRecords, nil
 }
 
 func GetMetricsByTimeRange(ctx context.Context, start, end time.Time) ([]models.Metrics, error) {
@@ -94,28 +102,29 @@ func GetMetricsByTimeRange(ctx context.Context, start, end time.Time) ([]models.
 		Find(&res).Error
 	if err != nil {
 		logger.Log.Error("Error fetching metrics by time range:", zap.Error(err))
+		return nil, err
 	}
 
 	return res, nil
 }
 
-func GetAverageMetrics(ctx context.Context, start, end time.Time) (models.Metrics, error) {
-	var res models.Metrics
+func GetAverageMetrics(ctx context.Context, start, end time.Time) (models.AvgMetrics, error) {
+	var res models.AvgMetrics
 
 	if database.DB == nil {
 		logger.Log.Error("Database is not initialized")
-		return models.Metrics{}, gorm.ErrInvalidDB
+		return models.AvgMetrics{}, gorm.ErrInvalidDB
 	}
 
 	if err := database.DB.WithContext(ctx).
 		Raw(`SELECT 
                 AVG(cpu_percent) AS cpu_percent, 
-                AVG(memory_percent) AS memory_percent 
+                AVG(mem_percent) AS mem_percent 
              FROM metrics 
              WHERE created_at BETWEEN ? AND ?`, start, end).
 		Scan(&res).Error; err != nil {
 		logger.Log.Error("Error fetching average metrics:", zap.Error(err))
-		return models.Metrics{}, err
+		return models.AvgMetrics{}, err
 	}
 
 	return res, nil
