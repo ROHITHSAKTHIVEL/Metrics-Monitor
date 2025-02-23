@@ -14,4 +14,5 @@ RUN go build -o metrics-monitor main.go
 
 EXPOSE 8888
 
-CMD ["./metrics-monitor"]
+ENTRYPOINT  ["./metrics-monitor"]
+

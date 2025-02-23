@@ -16,7 +16,6 @@ func LoadConfig() *models.Config {
 		logger.Log.Fatal("Error In Loading Config", zap.Error(err))
 	}
 
-	dbPort, _ := strconv.Atoi(os.Getenv("DB_PORT"))
 	metricsInterval, _ := strconv.Atoi(os.Getenv("METRICS_INTERVAL_SECONDS"))
 
 	return &models.Config{
@@ -25,7 +24,7 @@ func LoadConfig() *models.Config {
 		DBPass:          os.Getenv("DB_PASS"),
 		DBName:          os.Getenv("DB_NAME"),
 		Port:            os.Getenv("PORT"),
-		DBPort:          dbPort,
+		DBPort:         os.Getenv("DB_PORT"),
 		MetricsInterval: metricsInterval,
 	}
 

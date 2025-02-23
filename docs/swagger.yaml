@@ -1,4 +1,11 @@
 definitions:
+  models.AvgMetrics:
+    properties:
+      cpu_percent:
+        type: number
+      mem_percent:
+        type: number
+    type: object
   models.Metrics:
     properties:
       cpu_percent:
@@ -7,20 +14,30 @@ definitions:
         type: string
       id:
         type: string
-      memory_percent:
+      mem_percent:
         type: number
-      updated_sat:
-        type: string
     type: object
 info:
   contact: {}
 paths:
+  /health:
+    get:
+      description: Returns service status
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Check service health
+      tags:
+      - Health
   /metrics:
     get:
       consumes:
       - application/json
-      description: Fetches all metrics collected between the provided start and end
-        timestamps.
+      description: Fetch metrics collected between start and end timestamps.
       parameters:
       - description: Start timestamp (RFC3339 format, e.g., 2025-02-22T00:00:00Z)
         in: query
@@ -36,24 +53,28 @@ paths:
       - application/json
       responses:
         "200":
-          description: List of metrics
+          description: OK
           schema:
-            additionalProperties: true
-            type: object
+            items:
+              $ref: '#/definitions/models.Metrics'
+            type: array
         "400":
-          description: Invalid input format
+          description: Bad Request
           schema:
-            additionalProperties: true
+            additionalProperties:
+              type: string
             type: object
         "404":
-          description: No metrics found
+          description: Not Found
           schema:
-            additionalProperties: true
+            additionalProperties:
+              type: string
             type: object
         "500":
-          description: Internal server error
+          description: Internal Server Error
           schema:
-            additionalProperties: true
+            additionalProperties:
+              type: string
             type: object
       summary: Get Metrics By Time Range
       tags:
@@ -80,8 +101,9 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            items:
+              $ref: '#/definitions/models.Metrics'
+            type: array
         "500":
           description: Internal Server Error
           schema:
@@ -113,7 +135,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.Metrics'
+            $ref: '#/definitions/models.AvgMetrics'
         "400":
           description: Bad Request
           schema:

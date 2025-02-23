@@ -17,6 +17,8 @@ services:
         condition: service_healthy
     entrypoint: >
       sh -c "until pg_isready -h metrics-db -p 5432 -U postgres; do sleep 2; done && ./metrics-monitor"
+    stop_signal: SIGINT
+    stop_grace_period: 30s
 
   metrics-db:
     image: postgres:15-alpine

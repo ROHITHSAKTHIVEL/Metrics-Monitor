@@ -17,5 +17,6 @@ func SetRouter(apiRouter *gin.Engine) {
 		metrics.GET("/average", handler.GetAverageMetrics)
 	}
 	apiRouter.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	apiRouter.GET("/health", handler.HealthCheck)
 
 }

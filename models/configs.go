@@ -6,6 +6,6 @@ type Config struct {
 	DBPass          string
 	DBName          string
 	Port            string
-	DBPort          int
+	DBPort          string
 	MetricsInterval int
 }

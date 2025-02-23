@@ -21,7 +21,7 @@ import (
 // @Produce  json
 // @Param page query int false "Page number" default(1)
 // @Param pageSize query int false "Number of items per page" default(10)
-// @Success 200 {object} map[string]interface{}
+// @Success 200 {array} models.Metrics
 // @Failure 500 {object} map[string]string
 // @Router /metrics/ [get]
 func GetAllMetrics(c *gin.Context) {
@@ -30,30 +30,30 @@ func GetAllMetrics(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
 
-	// Calculate offset
+	// Validate pagination inputs
 	if page < 1 {
 		page = 1
 	}
-	if pageSize < 1 {
-		pageSize = 10
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 10 // Set max limit
 	}
 	offset := (page - 1) * pageSize
 
 	response, totalRecords, err := service.GetAllMetrics(context.Background(), pageSize, offset)
 	if err != nil {
-		logger.Log.Error("GetAllMetric error", zap.Error(err))
+		logger.Log.Error("GetAllMetrics error", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"Message": err,
-			"time":    time.Now(),
+			"Message": err.Error(),
+			"time":    time.Now().UTC(),
 		})
 		return
 	}
 
 	if len(response) == 0 {
-		logger.Log.Error("No metrics found ")
+		logger.Log.Warn("No metrics found")
 		c.JSON(http.StatusNotFound, gin.H{
-			"message": "No metrics found ",
-			"time":    time.Now(),
+			"message": "No metrics found",
+			"time":    time.Now().UTC(),
 		})
 		return
 	}
@@ -61,26 +61,24 @@ func GetAllMetrics(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"data":         response,
 		"totalRecords": totalRecords,
-		"time":         time.Now(),
+		"time":         time.Now().UTC(),
 	})
 }
 
-// GetMetricsByTimeRange retrieves metrics within a specified time range.
-//
-// @Summary      Get Metrics By Time Range
-// @Description  Fetches all metrics collected between the provided start and end timestamps.
-// @Tags         Metrics
-// @Accept       json
-// @Produce      json
-// @Param        start  query     string  true  "Start timestamp (RFC3339 format, e.g., 2025-02-22T00:00:00Z)"
-// @Param        end    query     string  true  "End timestamp (RFC3339 format, e.g., 2025-02-22T23:59:59Z)"
-// @Success      200    {object}  map[string]interface{}  "List of metrics"
-// @Failure      400    {object}  map[string]interface{}  "Invalid input format"
-// @Failure      404    {object}  map[string]interface{}  "No metrics found"
-// @Failure      500    {object}  map[string]interface{}  "Internal server error"
-// @Router       /metrics [get]
+// GetMetricsByTimeRange godoc
+// @Summary Get Metrics By Time Range
+// @Description Fetch metrics collected between start and end timestamps.
+// @Tags Metrics
+// @Accept json
+// @Produce json
+// @Param start query string true "Start timestamp (RFC3339 format, e.g., 2025-02-22T00:00:00Z)"
+// @Param end query string true "End timestamp (RFC3339 format, e.g., 2025-02-22T23:59:59Z)"
+// @Success 200 {array} models.Metrics
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /metrics [get]
 func GetMetricsByTimeRange(c *gin.Context) {
-
 	logger.Log.Debug("GetMetricsByTimeRange handler")
 
 	start := c.Query("start")
@@ -88,22 +86,22 @@ func GetMetricsByTimeRange(c *gin.Context) {
 
 	parsedStartTime, err := utils.ParseTime(start)
 	if err != nil {
-		logger.Log.Error("start time parsing error ", zap.Error(err))
+		logger.Log.Error("Start time parsing error", zap.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{
-			"Message": "start time parsing error",
-			"Error":   err,
-			"time":    time.Now(),
+			"Message": "Invalid start time format",
+			"Error":   err.Error(),
+			"time":    time.Now().UTC(),
 		})
 		return
 	}
 
 	parsedEndTime, err := utils.ParseTime(end)
 	if err != nil {
-		logger.Log.Error("End time parsing error ", zap.Error(err))
+		logger.Log.Error("End time parsing error", zap.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{
-			"Message": "end time parsing error",
-			"Error":   err,
-			"time":    time.Now(),
+			"Message": "Invalid end time format",
+			"Error":   err.Error(),
+			"time":    time.Now().UTC(),
 		})
 		return
 	}
@@ -112,24 +110,24 @@ func GetMetricsByTimeRange(c *gin.Context) {
 	if err != nil {
 		logger.Log.Error("GetMetricsByTimeRange error", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"Message": err,
-			"time":    time.Now(),
+			"Message": err.Error(),
+			"time":    time.Now().UTC(),
 		})
 		return
 	}
 
 	if len(response) == 0 {
-		logger.Log.Error("No metrics found in the given time range")
+		logger.Log.Warn("No metrics found in the given time range")
 		c.JSON(http.StatusNotFound, gin.H{
 			"message": "No metrics found in the given time range",
-			"time":    time.Now(),
+			"time":    time.Now().UTC(),
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"data": response,
-		"time": time.Now(),
+		"time": time.Now().UTC(),
 	})
 }
 
@@ -137,39 +135,38 @@ func GetMetricsByTimeRange(c *gin.Context) {
 // @Summary Get average CPU and memory usage in a time range
 // @Description Retrieve average CPU and memory usage between start and end timestamps
 // @Tags Metrics
-// @Accept  json
-// @Produce  json
+// @Accept json
+// @Produce json
 // @Param start query string true "Start timestamp (RFC3339 format)"
 // @Param end query string true "End timestamp (RFC3339 format)"
-// @Success 200 {object} models.Metrics
+// @Success 200 {object} models.AvgMetrics
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /metrics/average [get]
 func GetAverageMetrics(c *gin.Context) {
-
-	logger.Log.Debug("GetAlGetAverageMetrics handler")
+	logger.Log.Debug("GetAverageMetrics handler")
 
 	start := c.Query("start")
 	end := c.Query("end")
 
 	parsedStartTime, err := utils.ParseTime(start)
 	if err != nil {
-		logger.Log.Error("start time parsing error ", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"Message": "start time parsing error",
-			"Error":   err,
-			"time":    time.Now(),
+		logger.Log.Error("Start time parsing error", zap.Error(err))
+		c.JSON(http.StatusBadRequest, gin.H{
+			"Message": "Invalid start time format",
+			"Error":   err.Error(),
+			"time":    time.Now().UTC(),
 		})
 		return
 	}
 
 	parsedEndTime, err := utils.ParseTime(end)
 	if err != nil {
-		logger.Log.Error("End time parsing error ", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"Message": "end time parsing error",
-			"Error":   err,
-			"time":    time.Now(),
+		logger.Log.Error("End time parsing error", zap.Error(err))
+		c.JSON(http.StatusBadRequest, gin.H{
+			"Message": "Invalid end time format",
+			"Error":   err.Error(),
+			"time":    time.Now().UTC(),
 		})
 		return
 	}
@@ -178,23 +175,33 @@ func GetAverageMetrics(c *gin.Context) {
 	if err != nil {
 		logger.Log.Error("GetAverageMetrics error", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"Error": err,
-			"time":  time.Now(),
+			"Error": err.Error(),
+			"time":  time.Now().UTC(),
 		})
 		return
 	}
 
-	if response.CPUPercent == 0 || response.MemPercent == 0 {
-		logger.Log.Error("No metrics found in the given time range")
+	if response.CPUPercent == 0 && response.MemPercent == 0 {
+		logger.Log.Warn("No metrics found in the given time range")
 		c.JSON(http.StatusNotFound, gin.H{
 			"message": "No metrics found in the given time range",
-			"time":    time.Now(),
+			"time":    time.Now().UTC(),
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"data": response,
-		"time": time.Now(),
+		"time": time.Now().UTC(),
 	})
+}
+
+// HealthCheck godoc
+// @Summary Check service health
+// @Description Returns service status
+// @Tags Health
+// @Success 200 {object} map[string]string
+// @Router /health [get]
+func HealthCheck(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }

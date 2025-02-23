@@ -15,9 +15,29 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/health": {
+            "get": {
+                "description": "Returns service status",
+                "tags": [
+                    "Health"
+                ],
+                "summary": "Check service health",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/metrics": {
             "get": {
-                "description": "Fetches all metrics collected between the provided start and end timestamps.",
+                "description": "Fetch metrics collected between start and end timestamps.",
                 "consumes": [
                     "application/json"
                 ],
@@ -46,31 +66,39 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "List of metrics",
+                        "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.Metrics"
+                            }
                         }
                     },
                     "400": {
-                        "description": "Invalid input format",
+                        "description": "Bad Request",
                         "schema": {
                             "type": "object",
-                            "additionalProperties": true
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     },
                     "404": {
-                        "description": "No metrics found",
+                        "description": "Not Found",
                         "schema": {
                             "type": "object",
-                            "additionalProperties": true
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
+                        "description": "Internal Server Error",
                         "schema": {
                             "type": "object",
-                            "additionalProperties": true
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
@@ -109,8 +137,10 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.Metrics"
+                            }
                         }
                     },
                     "500": {
@@ -158,7 +188,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.Metrics"
+                            "$ref": "#/definitions/models.AvgMetrics"
                         }
                     },
                     "400": {
@@ -184,6 +214,17 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "models.AvgMetrics": {
+            "type": "object",
+            "properties": {
+                "cpu_percent": {
+                    "type": "number"
+                },
+                "mem_percent": {
+                    "type": "number"
+                }
+            }
+        },
         "models.Metrics": {
             "type": "object",
             "properties": {
@@ -196,11 +237,8 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
-                "memory_percent": {
+                "mem_percent": {
                     "type": "number"
-                },
-                "updated_sat": {
-                    "type": "string"
                 }
             }
         }

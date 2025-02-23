@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -22,12 +24,18 @@ func main() {
 	r := gin.Default()
 	router.SetRouter(r)
 
-	stopChan := make(chan struct{})
-	errChan := make(chan error)
-	go service.MetricsCollector(cfg.MetricsInterval, stopChan, errChan)
+	server := &http.Server{
+		Addr:    cfg.Port,
+		Handler: r,
+	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+
+	errChan := make(chan error, 10)
 	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	go service.MetricsCollector(ctx, cfg.MetricsInterval, errChan)
 
 	go func() {
 		for err := range errChan {
@@ -35,9 +43,11 @@ func main() {
 		}
 	}()
 
+	logger.Log.Info("Starting API server", zap.String("port", cfg.Port))
+	// Used standard http lib for graceful shutdown
 	go func() {
-		if err := r.Run(cfg.Port); err != nil {
-			logger.Log.Fatal("Server failed to start", zap.Error(err))
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Log.Fatal("Server failed", zap.Error(err))
 		}
 	}()
 
@@ -45,8 +55,30 @@ func main() {
 	sig := <-sigChan
 	logger.Log.Info("Received termination signal", zap.String("signal", sig.String()))
 
-	// Stop Metrics Collector
-	close(stopChan)
+	// Stop Metrics Collector gracefully
+	cancel()
+	time.Sleep(1 * time.Second)
+	close(errChan)
+
+	// Close Database
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer shutdownCancel()
+
+	//shutdown http server gracefully
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		logger.Log.Error("Server shutdown failed", zap.Error(err))
+	} else {
+		logger.Log.Info("Server shutdown successfully")
+	}
+
+	// Close database connection
+	if err := database.Shutdown(shutdownCtx); err != nil {
+		logger.Log.Error("Database shutdown failed", zap.Error(err))
+	} else {
+		logger.Log.Info("Database shutdown successfully")
+	}
+
 	logger.Log.Info("Shutting down gracefully...")
-	time.Sleep(2 * time.Second) // Give time for goroutines to clean up
+	time.Sleep(1 * time.Second)
+	os.Exit(0)
 }

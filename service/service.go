@@ -15,7 +15,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func MetricsCollector(interval int, stopChan chan struct{}, errChan chan error) {
+func MetricsCollector(ctx context.Context, interval int, errChan chan error) {
 	ticker := time.NewTicker(time.Duration(interval) * time.Second)
 	defer ticker.Stop()
 
@@ -25,7 +25,7 @@ func MetricsCollector(interval int, stopChan chan struct{}, errChan chan error) 
 			logger.Log.Info("Collecting system metrics...")
 			go CollectAndSaveMetrics(errChan)
 
-		case <-stopChan:
+		case <-ctx.Done():
 			logger.Log.Info("Stopping Metrics Collector...")
 			return
 
