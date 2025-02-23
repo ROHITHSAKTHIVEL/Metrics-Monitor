@@ -102,12 +102,4 @@ docker exec -it metrics-db psql -U postgres -d metrics_db
    - Ensure the shutdown logic is properly handling signals.
    - Run `docker-compose down` and wait for containers to terminate.
 
-## Contributing
-1. Fork the repository.
-2. Create a new feature branch.
-3. Commit changes and push to the branch.
-4. Open a pull request for review.
-
-## License
-This project is licensed under the MIT License.
 
