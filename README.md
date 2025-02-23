@@ -1,6 +1,4 @@
 # Metrics-Monitor
-
-## Overview
 Metrics-Monitor is a lightweight Go-based monitoring tool designed to track system metrics such as CPU usage, memory consumption, and other performance indicators. It provides an API to fetch real-time system metrics and logs data for analysis.
 
 ## Features
